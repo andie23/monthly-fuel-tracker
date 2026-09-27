@@ -4,6 +4,7 @@ import {
   getCostPerDay,
   getCurrentMonthCarpoolSavings,
   getCurrentMonthKm,
+  getCurrentMonthNetSpent,
   getCurrentMonthSavings,
   getCurrentMonthSpent,
   getLatestEfficiency,
@@ -54,6 +55,8 @@ export function Dashboard({
   const totalCarpoolSavings = getTotalCarpoolSavings(carpoolContributions)
   const monthSavings = getCurrentMonthSavings(logs, carpoolContributions, budget)
   const projectedSavings = getProjectedMonthSavings(logs, budget, settings.fuelPricePerLiter)
+  const netSpent = getCurrentMonthNetSpent(logs, carpoolContributions)
+  const budgetUsedPct = budget > 0 ? (spent / budget) * 100 : null
 
   return (
     <div className="space-y-6">
@@ -120,6 +123,16 @@ export function Dashboard({
           }
         />
         <StatCard label="Distance this month" value={monthKm > 0 ? formatKm(monthKm) : '—'} />
+        <StatCard
+          label="Net spend after carpooling"
+          value={formatCurrency(netSpent)}
+          hint={monthlyCarpoolSavings > 0 ? `${formatCurrency(spent)} minus ${formatKwacha(monthlyCarpoolSavings)} collected` : 'No carpool savings collected yet'}
+        />
+        <StatCard
+          label="Spent vs budget"
+          value={budget > 0 ? `${formatCurrency(spent)} / ${formatCurrency(budget)}` : '—'}
+          hint={budgetUsedPct !== null ? `${Math.round(budgetUsedPct)}% of budget used` : 'Set a monthly budget to compare'}
+        />
       </div>
 
       {lastLog && lastLogEstimate !== null && (

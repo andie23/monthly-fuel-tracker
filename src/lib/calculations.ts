@@ -197,6 +197,15 @@ export function getCurrentMonthSavings(
   return remaining + getCurrentMonthCarpoolSavings(contributions, now)
 }
 
+/** Amount actually spent out of pocket this month, after subtracting carpool contributions collected. */
+export function getCurrentMonthNetSpent(
+  logs: FuelLog[],
+  contributions: CarpoolContribution[],
+  now: Date = new Date(),
+): number {
+  return getCurrentMonthSpent(logs, now) - getCurrentMonthCarpoolSavings(contributions, now)
+}
+
 /** Total carpooling contributions collected across all time, treated as fuel-cost savings. */
 export function getTotalCarpoolSavings(contributions: CarpoolContribution[]): number {
   return contributions.reduce((sum, c) => sum + c.amount, 0)
