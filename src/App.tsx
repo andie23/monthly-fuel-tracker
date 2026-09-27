@@ -87,31 +87,35 @@ function App() {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-md px-4 pb-24 pt-6">
-      <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-100">Fuel Tracker</h1>
-        <button
-          onClick={() => setShowSettingsModal(true)}
-          aria-label="Open settings"
-          className="rounded-full border border-slate-800 p-2 text-slate-300"
-        >
-          ⚙
-        </button>
-      </header>
+    <div className="mx-auto min-h-screen max-w-md px-4 pb-24 pt-36">
+      <header className="fixed inset-x-0 top-0 z-10 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
+        <div className="mx-auto max-w-md px-4 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold text-slate-100">Fuel Tracker</h1>
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              aria-label="Open settings"
+              className="rounded-full border border-slate-800 p-2 text-slate-300"
+            >
+              ⚙
+            </button>
+          </div>
 
-      <nav className="mb-6 flex gap-2 rounded-xl bg-slate-900 p-1">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
-              tab === t.id ? 'bg-sky-500 text-slate-950' : 'text-slate-400'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
+          <nav className="mt-4 flex gap-2 rounded-xl bg-slate-900 p-1">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+                  tab === t.id ? 'bg-sky-500 text-slate-950' : 'text-slate-400'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </header>
 
       {tab === 'dashboard' && (
         <Dashboard
