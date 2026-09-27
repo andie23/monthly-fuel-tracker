@@ -1,10 +1,11 @@
-import { getMonthlyCarpoolSavings, getMonthlyUsage } from '../lib/calculations'
-import { formatCurrency, formatKm, formatKwacha, formatLiters } from '../lib/format'
-import type { CarpoolContribution, FuelLog } from '../types'
+import { getCycleBoundsForKey, getMonthlyCarpoolSavings, getMonthlyUsage } from '../lib/calculations'
+import { formatCurrency, formatDateRange, formatKm, formatKwacha, formatLiters } from '../lib/format'
+import type { CarpoolContribution, FuelLog, Settings } from '../types'
 
 interface MonthlyUsageProps {
   logs: FuelLog[]
   carpoolContributions: CarpoolContribution[]
+  settings: Settings
 }
 
 function formatMonth(month: string): string {
@@ -13,9 +14,14 @@ function formatMonth(month: string): string {
   return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 }
 
-export function MonthlyUsage({ logs, carpoolContributions }: MonthlyUsageProps) {
-  const usage = getMonthlyUsage(logs)
-  const carpoolByMonth = new Map(getMonthlyCarpoolSavings(carpoolContributions).map((c) => [c.month, c]))
+export function MonthlyUsage({ logs, carpoolContributions, settings }: MonthlyUsageProps) {
+  const cycleStartDay = settings.payCycleStartDay || 1
+  const usingPayCycle = cycleStartDay > 1
+
+  const usage = getMonthlyUsage(logs, cycleStartDay)
+  const carpoolByMonth = new Map(
+    getMonthlyCarpoolSavings(carpoolContributions, cycleStartDay).map((c) => [c.month, c]),
+  )
 
   const months = [...new Set([...usage.map((u) => u.month), ...carpoolByMonth.keys()])].sort((a, b) =>
     b.localeCompare(a),
@@ -39,7 +45,14 @@ export function MonthlyUsage({ logs, carpoolContributions }: MonthlyUsageProps) 
         return (
           <div key={month} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-slate-100">{formatMonth(month)}</p>
+              <p className="font-semibold text-slate-100">
+                {usingPayCycle
+                  ? formatDateRange(
+                      getCycleBoundsForKey(month, cycleStartDay).start,
+                      getCycleBoundsForKey(month, cycleStartDay).end,
+                    )
+                  : formatMonth(month)}
+              </p>
               {entry && (
                 <p className="text-sm text-slate-500">
                   {entry.fillCount} fill-up{entry.fillCount === 1 ? '' : 's'}

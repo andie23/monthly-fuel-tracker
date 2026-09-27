@@ -10,12 +10,15 @@ interface SettingsModalProps {
 export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps) {
   const [fuelPricePerLiter, setFuelPricePerLiter] = useState(String(settings.fuelPricePerLiter || ''))
   const [monthlyBudget, setMonthlyBudget] = useState(String(settings.monthlyBudget || ''))
+  const [payCycleStartDay, setPayCycleStartDay] = useState(String(settings.payCycleStartDay || 1))
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    const parsedCycleDay = parseInt(payCycleStartDay, 10)
     onSave({
       fuelPricePerLiter: parseFloat(fuelPricePerLiter) || 0,
       monthlyBudget: parseFloat(monthlyBudget) || 0,
+      payCycleStartDay: parsedCycleDay >= 1 && parsedCycleDay <= 31 ? parsedCycleDay : 1,
     })
   }
 
@@ -53,6 +56,27 @@ export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps)
               onChange={(e) => setMonthlyBudget(e.target.value)}
               className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100"
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm text-slate-400" htmlFor="payCycleStartDay">
+              Pay cycle start day
+            </label>
+            <input
+              id="payCycleStartDay"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={31}
+              step={1}
+              value={payCycleStartDay}
+              onChange={(e) => setPayCycleStartDay(e.target.value)}
+              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Day of the month you get paid, e.g. 25. Fuel logged on or after this day counts toward the
+              next pay cycle instead of the current one. Use 1 to track by calendar month.
+            </p>
           </div>
 
           <div className="flex gap-3 pt-2">

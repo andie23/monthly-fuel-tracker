@@ -17,11 +17,18 @@ export interface FuelLog {
 export interface Settings {
   fuelPricePerLiter: number
   monthlyBudget: number
+  /**
+   * Day of the month your pay cycle starts on (e.g. 25, if you're paid on
+   * the 24th/25th) — fuel logged on or after this day counts toward the
+   * next cycle rather than the current calendar month. 1 = calendar month.
+   */
+  payCycleStartDay: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   fuelPricePerLiter: 0,
   monthlyBudget: 0,
+  payCycleStartDay: 1,
 }
 
 export interface CarpoolContribution {

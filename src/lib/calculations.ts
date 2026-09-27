@@ -105,9 +105,45 @@ export function getCostPerDay(logs: FuelLog[], pricePerLiter: number): number | 
   return litersPerDay * pricePerLiter
 }
 
-export function getMonthKey(date: string | Date): string {
+/**
+ * Key identifying the pay cycle a date falls in, named after the calendar
+ * month the cycle *starts* in. With `cycleStartDay` 1 (the default) this is
+ * just the calendar month; with e.g. 25, a date on or after the 25th
+ * belongs to the cycle starting that month, and anything earlier belongs to
+ * the cycle that started the previous month.
+ */
+export function getMonthKey(date: string | Date, cycleStartDay = 1): string {
   const d = typeof date === 'string' ? new Date(date) : date
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  let year = d.getFullYear()
+  let month = d.getMonth()
+  if (d.getDate() < cycleStartDay) {
+    month -= 1
+    if (month < 0) {
+      month = 11
+      year -= 1
+    }
+  }
+  return `${year}-${String(month + 1).padStart(2, '0')}`
+}
+
+/** First and last calendar day of the pay cycle identified by a {@link getMonthKey} key. */
+export function getCycleBoundsForKey(monthKey: string, cycleStartDay = 1): { start: Date; end: Date } {
+  const [year, month] = monthKey.split('-').map(Number)
+  return {
+    start: new Date(year, month - 1, cycleStartDay),
+    end: new Date(year, month, cycleStartDay - 1),
+  }
+}
+
+/** First and last calendar day of the pay cycle that `date` falls in. */
+export function getCycleBounds(date: Date, cycleStartDay = 1): { start: Date; end: Date } {
+  return getCycleBoundsForKey(getMonthKey(date, cycleStartDay), cycleStartDay)
+}
+
+function daysBetweenDates(a: Date, b: Date): number {
+  const utcA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())
+  const utcB = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate())
+  return Math.round((utcB - utcA) / MS_PER_DAY)
 }
 
 export interface MonthlyUsage {
@@ -119,11 +155,11 @@ export interface MonthlyUsage {
   km: number
 }
 
-export function getMonthlyUsage(logs: FuelLog[]): MonthlyUsage[] {
+export function getMonthlyUsage(logs: FuelLog[], cycleStartDay = 1): MonthlyUsage[] {
   const byMonth = new Map<string, MonthlyUsage>()
 
   for (const log of sortLogsByDate(logs)) {
-    const month = getMonthKey(log.date)
+    const month = getMonthKey(log.date, cycleStartDay)
     const existing = byMonth.get(month) ?? { month, liters: 0, cost: 0, fillCount: 0, km: 0 }
     existing.liters += log.liters
     existing.cost += log.cost
@@ -135,39 +171,40 @@ export function getMonthlyUsage(logs: FuelLog[]): MonthlyUsage[] {
   return [...byMonth.values()].sort((a, b) => b.month.localeCompare(a.month))
 }
 
-export function getCurrentMonthSpent(logs: FuelLog[], now: Date = new Date()): number {
-  const currentMonth = getMonthKey(now)
+export function getCurrentMonthSpent(logs: FuelLog[], now: Date = new Date(), cycleStartDay = 1): number {
+  const currentMonth = getMonthKey(now, cycleStartDay)
   return logs
-    .filter((log) => getMonthKey(log.date) === currentMonth)
+    .filter((log) => getMonthKey(log.date, cycleStartDay) === currentMonth)
     .reduce((sum, log) => sum + log.cost, 0)
 }
 
-/** Distance driven this month, attributed the same way as {@link getMonthlyUsage}. */
-export function getCurrentMonthKm(logs: FuelLog[], now: Date = new Date()): number {
-  const currentMonth = getMonthKey(now)
-  return getMonthlyUsage(logs).find((entry) => entry.month === currentMonth)?.km ?? 0
+/** Distance driven this cycle, attributed the same way as {@link getMonthlyUsage}. */
+export function getCurrentMonthKm(logs: FuelLog[], now: Date = new Date(), cycleStartDay = 1): number {
+  const currentMonth = getMonthKey(now, cycleStartDay)
+  return getMonthlyUsage(logs, cycleStartDay).find((entry) => entry.month === currentMonth)?.km ?? 0
 }
 
 /**
- * Projected total spend for the month, assuming spending continues at the
+ * Projected total spend for the cycle, assuming spending continues at the
  * historical daily rate for the days remaining after `now`.
  */
 export function getProjectedMonthSpend(
   logs: FuelLog[],
   pricePerLiter: number,
   now: Date = new Date(),
+  cycleStartDay = 1,
 ): number | null {
   const costPerDay = getCostPerDay(logs, pricePerLiter)
   if (costPerDay === null) return null
 
-  const spent = getCurrentMonthSpent(logs, now)
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-  const daysRemaining = Math.max(daysInMonth - now.getDate(), 0)
+  const spent = getCurrentMonthSpent(logs, now, cycleStartDay)
+  const { end } = getCycleBounds(now, cycleStartDay)
+  const daysRemaining = Math.max(daysBetweenDates(now, end), 0)
   return spent + costPerDay * daysRemaining
 }
 
 /**
- * Projected savings (budget minus projected spend) if the month finishes at
+ * Projected savings (budget minus projected spend) if the cycle finishes at
  * the current spending rate. Negative means projected to go over budget.
  */
 export function getProjectedMonthSavings(
@@ -175,35 +212,38 @@ export function getProjectedMonthSavings(
   monthlyBudget: number,
   pricePerLiter: number,
   now: Date = new Date(),
+  cycleStartDay = 1,
 ): number | null {
   if (monthlyBudget <= 0) return null
-  const projectedSpend = getProjectedMonthSpend(logs, pricePerLiter, now)
+  const projectedSpend = getProjectedMonthSpend(logs, pricePerLiter, now, cycleStartDay)
   if (projectedSpend === null) return null
   return monthlyBudget - projectedSpend
 }
 
 /**
- * Money saved so far this month: budget surplus (or deficit, if over) plus
- * carpool contributions collected this month.
+ * Money saved so far this cycle: budget surplus (or deficit, if over) plus
+ * carpool contributions collected this cycle.
  */
 export function getCurrentMonthSavings(
   logs: FuelLog[],
   contributions: CarpoolContribution[],
   monthlyBudget: number,
   now: Date = new Date(),
+  cycleStartDay = 1,
 ): number | null {
   if (monthlyBudget <= 0) return null
-  const remaining = monthlyBudget - getCurrentMonthSpent(logs, now)
-  return remaining + getCurrentMonthCarpoolSavings(contributions, now)
+  const remaining = monthlyBudget - getCurrentMonthSpent(logs, now, cycleStartDay)
+  return remaining + getCurrentMonthCarpoolSavings(contributions, now, cycleStartDay)
 }
 
-/** Amount actually spent out of pocket this month, after subtracting carpool contributions collected. */
+/** Amount actually spent out of pocket this cycle, after subtracting carpool contributions collected. */
 export function getCurrentMonthNetSpent(
   logs: FuelLog[],
   contributions: CarpoolContribution[],
   now: Date = new Date(),
+  cycleStartDay = 1,
 ): number {
-  return getCurrentMonthSpent(logs, now) - getCurrentMonthCarpoolSavings(contributions, now)
+  return getCurrentMonthSpent(logs, now, cycleStartDay) - getCurrentMonthCarpoolSavings(contributions, now, cycleStartDay)
 }
 
 /** Total carpooling contributions collected across all time, treated as fuel-cost savings. */
@@ -217,11 +257,14 @@ export interface MonthlyCarpoolSavings {
   contributionCount: number
 }
 
-export function getMonthlyCarpoolSavings(contributions: CarpoolContribution[]): MonthlyCarpoolSavings[] {
+export function getMonthlyCarpoolSavings(
+  contributions: CarpoolContribution[],
+  cycleStartDay = 1,
+): MonthlyCarpoolSavings[] {
   const byMonth = new Map<string, MonthlyCarpoolSavings>()
 
   for (const c of contributions) {
-    const month = getMonthKey(c.date)
+    const month = getMonthKey(c.date, cycleStartDay)
     const existing = byMonth.get(month) ?? { month, amount: 0, contributionCount: 0 }
     existing.amount += c.amount
     existing.contributionCount += 1
@@ -234,9 +277,10 @@ export function getMonthlyCarpoolSavings(contributions: CarpoolContribution[]): 
 export function getCurrentMonthCarpoolSavings(
   contributions: CarpoolContribution[],
   now: Date = new Date(),
+  cycleStartDay = 1,
 ): number {
-  const currentMonth = getMonthKey(now)
+  const currentMonth = getMonthKey(now, cycleStartDay)
   return contributions
-    .filter((c) => getMonthKey(c.date) === currentMonth)
+    .filter((c) => getMonthKey(c.date, cycleStartDay) === currentMonth)
     .reduce((sum, c) => sum + c.amount, 0)
 }

@@ -11,6 +11,8 @@ import {
   getCurrentMonthKm,
   getCurrentMonthSavings,
   getCurrentMonthSpent,
+  getCycleBounds,
+  getCycleBoundsForKey,
   getEfficiencyByLogId,
   getEfficiencyEntries,
   getLatestEfficiency,
@@ -198,6 +200,68 @@ describe('getMonthKey / getMonthlyUsage / getCurrentMonthSpent', () => {
       log({ id: '3', date: '2026-02-20', cost: 999 }),
     ]
     expect(getCurrentMonthSpent(logs, now)).toBe(150)
+  })
+})
+
+describe('pay cycle support', () => {
+  it('buckets a date before the cycle start day into the previous month\'s cycle', () => {
+    expect(getMonthKey('2026-03-20', 25)).toBe('2026-02')
+  })
+
+  it('buckets a date on or after the cycle start day into that month\'s cycle', () => {
+    expect(getMonthKey('2026-03-25', 25)).toBe('2026-03')
+    expect(getMonthKey('2026-03-31', 25)).toBe('2026-03')
+  })
+
+  it('rolls over the year when the cycle starts in December', () => {
+    expect(getMonthKey('2026-01-10', 25)).toBe('2025-12')
+  })
+
+  it('computes cycle bounds from a date', () => {
+    const { start, end } = getCycleBounds(new Date('2026-03-20T00:00:00.000Z'), 25)
+    expect(getMonthKey(start, 1)).toBe('2026-02') // sanity: start is Feb 25
+    expect(start.getDate()).toBe(25)
+    expect(start.getMonth()).toBe(1)
+    expect(end.getMonth()).toBe(2)
+    expect(end.getDate()).toBe(24)
+  })
+
+  it('computes cycle bounds from a month key', () => {
+    const { start, end } = getCycleBoundsForKey('2026-03', 25)
+    expect(start).toEqual(new Date(2026, 2, 25))
+    expect(end).toEqual(new Date(2026, 3, 24))
+  })
+
+  it('groups fuel logs by pay cycle instead of calendar month', () => {
+    const logs: FuelLog[] = [
+      log({ id: '1', date: '2026-03-20', cost: 50 }), // before the 25th -> Feb cycle
+      log({ id: '2', date: '2026-03-25', cost: 80 }), // on/after the 25th -> Mar cycle
+      log({ id: '3', date: '2026-04-01', cost: 20 }), // before next cycle start -> Mar cycle
+    ]
+    const usage = getMonthlyUsage(logs, 25)
+    expect(usage).toEqual([
+      { month: '2026-03', liters: 20, cost: 100, fillCount: 2, km: 0 },
+      { month: '2026-02', liters: 10, cost: 50, fillCount: 1, km: 0 },
+    ])
+  })
+
+  it('sums current-cycle spend using the configured cycle start day', () => {
+    const now = new Date('2026-03-20T00:00:00.000Z')
+    const logs: FuelLog[] = [
+      log({ id: '1', date: '2026-02-26', cost: 100 }), // in the cycle that contains now
+      log({ id: '2', date: '2026-03-25', cost: 999 }), // next cycle, excluded
+    ]
+    expect(getCurrentMonthSpent(logs, now, 25)).toBe(100)
+  })
+
+  it('projects cycle-end spend using days remaining in the cycle, not the calendar month', () => {
+    const now = new Date('2026-03-20T00:00:00.000Z') // cycle runs Feb 25 - Mar 24, 4 days remain
+    const logs: FuelLog[] = [
+      log({ id: '1', date: '2026-02-25', tripKm: 200, liters: 10, cost: 50 }),
+      log({ id: '2', date: '2026-03-07', liters: 20, cost: 100 }),
+    ]
+    // costPerDay = 10 (as in getCostPerDay test), spent so far = 150
+    expect(getProjectedMonthSpend(logs, 5, now, 25)).toBe(150 + 10 * 4)
   })
 })
 

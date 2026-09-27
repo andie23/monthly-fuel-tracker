@@ -57,8 +57,8 @@ describe('settings storage', () => {
   })
 
   it('saves and reloads settings', () => {
-    saveSettings({ fuelPricePerLiter: 1.5, monthlyBudget: 200 })
-    expect(getSettings()).toEqual({ fuelPricePerLiter: 1.5, monthlyBudget: 200 })
+    saveSettings({ fuelPricePerLiter: 1.5, monthlyBudget: 200, payCycleStartDay: 25 })
+    expect(getSettings()).toEqual({ fuelPricePerLiter: 1.5, monthlyBudget: 200, payCycleStartDay: 25 })
   })
 
   it('recovers gracefully from corrupted storage', () => {

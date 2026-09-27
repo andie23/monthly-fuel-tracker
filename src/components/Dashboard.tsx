@@ -7,11 +7,20 @@ import {
   getCurrentMonthNetSpent,
   getCurrentMonthSavings,
   getCurrentMonthSpent,
+  getCycleBounds,
   getLatestEfficiency,
   getProjectedMonthSavings,
   getTotalCarpoolSavings,
 } from '../lib/calculations'
-import { formatCurrency, formatDays, formatKm, formatKmPerLiter, formatKwacha, formatLiters } from '../lib/format'
+import {
+  formatCurrency,
+  formatDateRange,
+  formatDays,
+  formatKm,
+  formatKmPerLiter,
+  formatKwacha,
+  formatLiters,
+} from '../lib/format'
 import type { CarpoolContribution, FuelLog, Settings } from '../types'
 
 interface DashboardProps {
@@ -41,7 +50,13 @@ export function Dashboard({
   onLogCarpool,
   onOpenSettings,
 }: DashboardProps) {
-  const spent = getCurrentMonthSpent(logs)
+  const cycleStartDay = settings.payCycleStartDay || 1
+  const usingPayCycle = cycleStartDay > 1
+  const periodLabel = usingPayCycle ? 'this cycle' : 'this month'
+  const cycleBounds = getCycleBounds(new Date(), cycleStartDay)
+  const periodRange = usingPayCycle ? formatDateRange(cycleBounds.start, cycleBounds.end) : null
+
+  const spent = getCurrentMonthSpent(logs, new Date(), cycleStartDay)
   const budget = settings.monthlyBudget
   const remaining = budget - spent
   const costPerDay = getCostPerDay(logs, settings.fuelPricePerLiter)
@@ -49,13 +64,13 @@ export function Dashboard({
   const averageEfficiency = getAverageEfficiency(logs)
   const lastLog = [...logs].sort((a, b) => b.date.localeCompare(a.date))[0]
   const lastLogEstimate = lastLog ? estimateFuelDurationDays(lastLog.liters, logs) : null
-  const monthKm = getCurrentMonthKm(logs)
+  const monthKm = getCurrentMonthKm(logs, new Date(), cycleStartDay)
 
-  const monthlyCarpoolSavings = getCurrentMonthCarpoolSavings(carpoolContributions)
+  const monthlyCarpoolSavings = getCurrentMonthCarpoolSavings(carpoolContributions, new Date(), cycleStartDay)
   const totalCarpoolSavings = getTotalCarpoolSavings(carpoolContributions)
-  const monthSavings = getCurrentMonthSavings(logs, carpoolContributions, budget)
-  const projectedSavings = getProjectedMonthSavings(logs, budget, settings.fuelPricePerLiter)
-  const netSpent = getCurrentMonthNetSpent(logs, carpoolContributions)
+  const monthSavings = getCurrentMonthSavings(logs, carpoolContributions, budget, new Date(), cycleStartDay)
+  const projectedSavings = getProjectedMonthSavings(logs, budget, settings.fuelPricePerLiter, new Date(), cycleStartDay)
+  const netSpent = getCurrentMonthNetSpent(logs, carpoolContributions, new Date(), cycleStartDay)
   const budgetUsedPct = budget > 0 ? (spent / budget) * 100 : null
 
   return (
@@ -83,10 +98,14 @@ export function Dashboard({
         </button>
       )}
 
+      {usingPayCycle && (
+        <p className="text-center text-xs text-slate-500">Current pay cycle: {periodRange}</p>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Monthly budget" value={budget > 0 ? formatCurrency(budget) : '—'} />
+        <StatCard label={usingPayCycle ? 'Cycle budget' : 'Monthly budget'} value={budget > 0 ? formatCurrency(budget) : '—'} />
         <StatCard
-          label="Spent this month"
+          label={`Spent ${periodLabel}`}
           value={formatCurrency(spent)}
           hint={
             budget > 0
@@ -114,15 +133,15 @@ export function Dashboard({
           hint={totalCarpoolSavings > 0 ? `${formatKwacha(totalCarpoolSavings)} all-time` : undefined}
         />
         <StatCard
-          label="Savings this month"
+          label={`Savings ${periodLabel}`}
           value={monthSavings !== null ? formatCurrency(monthSavings) : '—'}
           hint={
             projectedSavings !== null
-              ? `Projected ${projectedSavings >= 0 ? 'savings' : 'overspend'} at month end: ${formatCurrency(Math.abs(projectedSavings))}`
+              ? `Projected ${projectedSavings >= 0 ? 'savings' : 'overspend'} at ${usingPayCycle ? 'cycle end' : 'month end'}: ${formatCurrency(Math.abs(projectedSavings))}`
               : 'Set a monthly budget to track savings'
           }
         />
-        <StatCard label="Distance this month" value={monthKm > 0 ? formatKm(monthKm) : '—'} />
+        <StatCard label={`Distance ${periodLabel}`} value={monthKm > 0 ? formatKm(monthKm) : '—'} />
         <StatCard
           label="Net spend after carpooling"
           value={formatCurrency(netSpent)}

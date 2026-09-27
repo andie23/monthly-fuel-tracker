@@ -30,3 +30,10 @@ export function formatDays(value: number): string {
 export function formatKwacha(value: number): string {
   return `K ${numberFormatter.format(value)}`
 }
+
+const dayMonthFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
+
+/** Formats a cycle's date range, e.g. "Aug 25 – Sep 24". */
+export function formatDateRange(start: Date, end: Date): string {
+  return `${dayMonthFormatter.format(start)} – ${dayMonthFormatter.format(end)}`
+}

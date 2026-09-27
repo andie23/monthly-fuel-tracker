@@ -127,7 +127,9 @@ function App() {
       {tab === 'carpool' && (
         <CarpoolHistory carpoolContributions={carpoolContributions} onDelete={handleDeleteCarpool} />
       )}
-      {tab === 'monthly' && <MonthlyUsage logs={logs} carpoolContributions={carpoolContributions} />}
+      {tab === 'monthly' && (
+        <MonthlyUsage logs={logs} carpoolContributions={carpoolContributions} settings={settings} />
+      )}
 
       {showLogModal && (
         <LogFuelModal
