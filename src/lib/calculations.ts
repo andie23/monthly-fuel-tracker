@@ -83,16 +83,22 @@ export function getAverageWeeklyMileage(logs: FuelLog[]): number | null {
   return dailyDistance * 7
 }
 
+/** Estimated distance the given liters of fuel will cover, based on historical average efficiency. */
+export function estimateFuelRangeKm(liters: number, logs: FuelLog[]): number | null {
+  const efficiency = getAverageEfficiency(logs)
+  if (efficiency === null) return null
+  return liters * efficiency
+}
+
 /** Estimated number of days the given liters of fuel will last, based on historical efficiency and usage. */
 export function estimateFuelDurationDays(
   liters: number,
   logs: FuelLog[],
 ): number | null {
-  const efficiency = getAverageEfficiency(logs)
+  const rangeKm = estimateFuelRangeKm(liters, logs)
   const dailyDistance = getAverageDailyDistance(logs)
-  if (efficiency === null || dailyDistance === null || dailyDistance <= 0) return null
-  const totalRangeKm = liters * efficiency
-  return totalRangeKm / dailyDistance
+  if (rangeKm === null || dailyDistance === null || dailyDistance <= 0) return null
+  return rangeKm / dailyDistance
 }
 
 /** Estimated cost per day, based on average weekly mileage, average efficiency and fuel price. */

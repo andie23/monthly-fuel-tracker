@@ -1,4 +1,4 @@
-import { getEfficiencyByLogId, sortLogsByDate } from '../lib/calculations'
+import { estimateFuelRangeKm, getEfficiencyByLogId, sortLogsByDate } from '../lib/calculations'
 import { confirmDeleteLog } from '../lib/confirm'
 import { formatCurrency, formatKm, formatKmPerLiter, formatLiters } from '../lib/format'
 import type { FuelLog } from '../types'
@@ -24,6 +24,7 @@ export function LogHistory({ logs, onDelete }: LogHistoryProps) {
     <div className="space-y-3">
       {sorted.map((log) => {
         const trip = efficiencyByLogId.get(log.id)
+        const rangeEstimate = trip ? null : estimateFuelRangeKm(log.liters, logs)
         return (
           <div key={log.id} className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 p-4">
             <div>
@@ -35,6 +36,11 @@ export function LogHistory({ logs, onDelete }: LogHistoryProps) {
                 <p className="mt-1 text-xs text-sky-400">
                   {formatKm(log.tripKm!)} until next fill-up ({trip.nextLog.date}) ·{' '}
                   {formatKmPerLiter(trip.kmPerLiter)}
+                </p>
+              )}
+              {rangeEstimate !== null && (
+                <p className="mt-1 text-xs text-sky-400">
+                  Est. range: ~{formatKm(rangeEstimate)} at avg. efficiency
                 </p>
               )}
             </div>

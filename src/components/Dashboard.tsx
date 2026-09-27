@@ -1,5 +1,6 @@
 import {
   estimateFuelDurationDays,
+  estimateFuelRangeKm,
   getAverageEfficiency,
   getCostPerDay,
   getCurrentMonthCarpoolSavings,
@@ -64,6 +65,7 @@ export function Dashboard({
   const averageEfficiency = getAverageEfficiency(logs)
   const lastLog = [...logs].sort((a, b) => b.date.localeCompare(a.date))[0]
   const lastLogEstimate = lastLog ? estimateFuelDurationDays(lastLog.liters, logs) : null
+  const lastLogRangeEstimate = lastLog ? estimateFuelRangeKm(lastLog.liters, logs) : null
   const monthKm = getCurrentMonthKm(logs, new Date(), cycleStartDay)
 
   const monthlyCarpoolSavings = getCurrentMonthCarpoolSavings(carpoolContributions, new Date(), cycleStartDay)
@@ -143,6 +145,11 @@ export function Dashboard({
         />
         <StatCard label={`Distance ${periodLabel}`} value={monthKm > 0 ? formatKm(monthKm) : '—'} />
         <StatCard
+          label="Estimated range"
+          value={lastLogRangeEstimate !== null ? formatKm(lastLogRangeEstimate) : '—'}
+          hint="From your last fill-up, at avg. efficiency"
+        />
+        <StatCard
           label="Net spend after carpooling"
           value={formatCurrency(netSpent)}
           hint={monthlyCarpoolSavings > 0 ? `${formatCurrency(spent)} minus ${formatKwacha(monthlyCarpoolSavings)} collected` : 'No carpool savings collected yet'}
@@ -159,7 +166,13 @@ export function Dashboard({
           <p className="text-xs uppercase tracking-wide text-slate-500">Estimated fuel duration</p>
           <p className="mt-1 text-lg text-slate-100">
             Your last {formatLiters(lastLog.liters)} fill-up should last about{' '}
-            <span className="font-semibold">{formatDays(lastLogEstimate)}</span>.
+            <span className="font-semibold">{formatDays(lastLogEstimate)}</span>
+            {lastLogRangeEstimate !== null && (
+              <>
+                {' '}(~<span className="font-semibold">{formatKm(lastLogRangeEstimate)}</span>)
+              </>
+            )}
+            .
           </p>
         </div>
       )}
