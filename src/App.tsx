@@ -89,9 +89,9 @@ function App() {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-md px-4 pb-24 pt-36">
+    <div className="mx-auto min-h-screen max-w-md px-4 pb-24 pt-[calc(9rem+env(safe-area-inset-top))]">
       <header className="fixed inset-x-0 top-0 z-10 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
-        <div className="mx-auto max-w-md px-4 py-4">
+        <div className="mx-auto max-w-md px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top))]">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold text-slate-100">Fuel Tracker</h1>
             <button

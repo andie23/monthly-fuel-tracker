@@ -21,15 +21,19 @@ export function TravelPlanner({ logs, settings }: TravelPlannerProps) {
   const [peopleInput, setPeopleInput] = useState('1')
   const [daysInput, setDaysInput] = useState('')
   const [tankCapacityInput, setTankCapacityInput] = useState('')
+  const [priceInput, setPriceInput] = useState(
+    settings.fuelPricePerLiter > 0 ? settings.fuelPricePerLiter.toFixed(2) : '',
+  )
 
-  const hasPrice = settings.fuelPricePerLiter > 0
+  const price = parseFloat(priceInput) || 0
+  const hasPrice = price > 0
   const efficiency = parseFloat(efficiencyInput) || 0
   const distance = parseFloat(distanceInput) || 0
   const totalDistance = roundTrip ? distance * 2 : distance
   const fuelNeeded = efficiency > 0 ? totalDistance / efficiency : 0
-  const cost = costFromLiters(fuelNeeded, settings.fuelPricePerLiter)
+  const cost = costFromLiters(fuelNeeded, price)
   const oneWayFuel = efficiency > 0 ? distance / efficiency : 0
-  const oneWayCost = costFromLiters(oneWayFuel, settings.fuelPricePerLiter)
+  const oneWayCost = costFromLiters(oneWayFuel, price)
 
   const people = Math.max(1, parseInt(peopleInput, 10) || 1)
   const costPerPerson = cost / people
@@ -83,6 +87,37 @@ export function TravelPlanner({ logs, settings }: TravelPlannerProps) {
           {autoEfficiency !== null
             ? 'Auto-calculated from your fuel logs. Edit to try a different value.'
             : 'Log a few fill-ups with trip distance to auto-calculate this.'}
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <div className="mb-1 flex items-center justify-between">
+          <label className="block text-sm text-slate-400" htmlFor="price-per-liter">
+            Cost per liter
+          </label>
+          {settings.fuelPricePerLiter > 0 && priceInput !== settings.fuelPricePerLiter.toFixed(2) && (
+            <button
+              type="button"
+              onClick={() => setPriceInput(settings.fuelPricePerLiter.toFixed(2))}
+              className="text-xs font-medium text-sky-400"
+            >
+              Reset to global price
+            </button>
+          )}
+        </div>
+        <input
+          id="price-per-liter"
+          type="number"
+          inputMode="decimal"
+          value={priceInput}
+          onChange={(e) => setPriceInput(e.target.value)}
+          placeholder="e.g. 25.50"
+          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100"
+        />
+        <p className="mt-1 text-xs text-slate-500">
+          {settings.fuelPricePerLiter > 0
+            ? 'Defaults to your global fuel price. Edit to try a different value.'
+            : 'Set a fuel price in Settings, or enter one here just for this plan.'}
         </p>
       </div>
 
