@@ -6,6 +6,7 @@ import { LogFuelModal } from './components/LogFuelModal'
 import { LogHistory } from './components/LogHistory'
 import { MonthlyUsage } from './components/MonthlyUsage'
 import { SettingsModal } from './components/SettingsModal'
+import { TravelPlanner } from './components/TravelPlanner'
 import { sortLogsByDate } from './lib/calculations'
 import {
   addCarpoolContribution,
@@ -21,13 +22,14 @@ import {
 } from './lib/storage'
 import type { Settings } from './types'
 
-type Tab = 'dashboard' | 'history' | 'carpool' | 'monthly'
+type Tab = 'dashboard' | 'history' | 'carpool' | 'monthly' | 'planner'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'history', label: 'History' },
   { id: 'carpool', label: 'Carpool' },
   { id: 'monthly', label: 'Monthly' },
+  { id: 'planner', label: 'Planner' },
 ]
 
 function App() {
@@ -134,6 +136,7 @@ function App() {
       {tab === 'monthly' && (
         <MonthlyUsage logs={logs} carpoolContributions={carpoolContributions} settings={settings} />
       )}
+      {tab === 'planner' && <TravelPlanner logs={logs} settings={settings} />}
 
       {showLogModal && (
         <LogFuelModal
